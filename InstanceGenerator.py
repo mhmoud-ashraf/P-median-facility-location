@@ -3,11 +3,11 @@ import numpy as np
 #%%
 class instance:
     def __init__(self, J, I, C, P, Omega, f, g, l, d, seed):
-        self.J = J # Set of potential sites
-        self.I = I # Set of customers
+        self.J = J # Number potential sites
+        self.I = I # Number customers
         self.C = C # Upper bound of capacity
         self.P = P # Number of facilities to be opened
-        self.Omega = Omega # Set of scenarios
+        self.Omega = Omega # Number of scenarios
         self.f = f # Fixed cost of opening a facility at site j
         self.g = g # Capacity cost per unit at site j
         self.l = l # Service cost from site j to customer i
@@ -27,6 +27,7 @@ class instance:
         self.g = dict(enumerate(np.random.randint(self.g[0], self.g[1]+1, size=J), 1))
         self.l = {(i,j): np.random.randint(self.l[0], self.l[1]+1) for i in range(1,I+1) for j in range(1,J+1)}
         self.d = {(i,k): np.random.randint(self.d[0], self.d[1]+1) for i in range(1,I+1) for k in range(1,Omega+1)}
+        self.p = {k: 1/Omega for k in range(1,Omega+1)}
         return self
         
     def save_instance(self):
@@ -42,20 +43,21 @@ class instance:
         file.write("g = %s\n" % self.g)
         file.write("l = %s\n" % self.l)
         file.write("d = %s\n" % self.d)
+        file.write("p = %s\n" % self.p)
         file.close()
 #%%
 if __name__ == "__main__":
     # Define sets and parameters
-    J = 6 # Set of potential sites
-    I = 4 # Set of customers
-    C = 50 # Upper bound of capacity
-    P = 3 # Number of facilities to be opened
-    Omega = 100 # Set of scenarios
-    f = (3, 15) # Fixed cost of opening a facility at site j
-    g = (1, 5) # Capacity cost per unit at site j
-    l = (2, 10) # Service cost from site j to customer i
-    d = (1, 10) # Demand of customer i under scenario k
-    seed = 0
+    J = 6 # Number potential sites
+    I = 5 # Number customers
+    C = 30 # Upper bound of capacity
+    P = 3 # Number of facilities that can be opened
+    Omega = 3 # Number of scenarios
+    f = (5, 15) # Fixed cost of opening a facility at site j
+    g = (1, 10) # Capacity cost per unit at site j
+    l = (1, 5) # Service cost from site j to customer i
+    d = (5, 10) # Demand of customer i under scenario k
+    seed = 1
     # Generate an intsance
     inst = instance(J, I, C, P, Omega, f, g, l, d, seed).generator()
     inst.save_instance()
