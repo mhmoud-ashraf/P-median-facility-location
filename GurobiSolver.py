@@ -6,7 +6,7 @@ class model:
     def __init__(self,instance):
         self.J, self.I, self.C, self.P, self.Omega, self.f, self.g, self.l, self.d, self.p = instance
         
-    def solve(self):
+    def create_model(self):
         # Create a new model
         m = gp.Model("Scenatio_%s" % self.Omega)
         # Create variables
@@ -31,16 +31,27 @@ class model:
         constr8 = m.addConstrs((x[i,j,k] <= 1 for i in self.I for j in self.J for k in self.Omega), name="upper_bound")
         # Update model
         m.update()
-        # Solve model
+        return m
+    
+    def solve(self, scenarios):
+        m = self.create_model()
         m.optimize()
-        # Return model
+        m.write("Instance_%s.lp" % scenarios)
+        m.write("Instance_%s.sol" % scenarios)
+        return m
+
+    def load(self, scenarios):
+        m = self.create_model()
+        m.read("Instance_%s.sol" % scenarios)
+        m.optimize()
         return m
 #%%
 if __name__=="__main__":
-    scenarios = 100
+    scenarios = 3
     instance_path = "Instance_%s.txt" % scenarios
     inst = instance(instance_path).parse_instance()
-    m = model(inst).solve()
+    # m = model(inst).solve(scenarios)
+    m = model(inst).load(scenarios)
     print("Objective value:", m.objVal)
     for v in m.getVars():
         if v.x > 0:
