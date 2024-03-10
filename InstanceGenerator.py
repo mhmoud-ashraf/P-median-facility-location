@@ -26,7 +26,7 @@ class instance:
         self.f = dict(enumerate(np.random.randint(self.f[0], self.f[1]+1, size=J), 1))
         self.g = dict(enumerate(np.random.randint(self.g[0], self.g[1]+1, size=J), 1))
         self.l = {(i,j): np.random.randint(self.l[0], self.l[1]+1) for i in range(1,I+1) for j in range(1,J+1)}
-        self.d = {(i,k): np.random.randint(self.d[0], self.d[1]+1) for i in range(1,I+1) for k in range(1,Omega+1)}
+        self.d = {(i,k): np.random.randint(self.d[0]*k, self.d[1]*k+1) for i in range(1,I+1) for k in range(1,Omega+1)}
         self.p = {k: 1/Omega for k in range(1,Omega+1)}
         return self
         
@@ -57,7 +57,7 @@ if __name__ == "__main__":
     g = (1, 10) # Capacity cost per unit at site j
     l = (1, 5) # Service cost from site j to customer i
     d = (5, 10) # Demand of customer i under scenario k
-    seed = 1
+    seed = 1 # Seed for random number generator
     # Generate an intsance
     inst = instance(J, I, C, P, Omega, f, g, l, d, seed).generator()
     inst.save_instance()

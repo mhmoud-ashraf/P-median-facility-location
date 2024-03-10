@@ -26,9 +26,7 @@ class model:
         constr3 = m.addConstrs((gp.quicksum(x[i,j,k] for j in self.J) == 1 for i in self.I for k in self.Omega), name="demand_fulfillment")
         constr4 = m.addConstrs((w[j] <= self.C*y[j] for j in self.J), name="facility_capacity")
         constr5 = m.addConstr((gp.quicksum(y[j] for j in self.J) <= self.P), name="number_of_facilities")
-        constr6 = m.addConstrs((w[j] >= 0 for j in self.J), name="non_negativity")
-        constr7 = m.addConstrs((x[i,j,k] >= 0 for i in self.I for j in self.J for k in self.Omega), name="non_negativity")
-        constr8 = m.addConstrs((x[i,j,k] <= 1 for i in self.I for j in self.J for k in self.Omega), name="upper_bound")
+        constr6 = m.addConstrs((x[i,j,k] <= 1 for i in self.I for j in self.J for k in self.Omega), name="upper_bound")
         # Update model
         m.update()
         return m
@@ -50,8 +48,8 @@ if __name__=="__main__":
     scenarios = 3
     instance_path = "Instance_%s.txt" % scenarios
     inst = instance(instance_path).parse_instance()
-    # m = model(inst).solve(scenarios)
-    m = model(inst).load(scenarios)
+    m = model(inst).solve(scenarios)
+    # m = model(inst).load(scenarios)
     print("Objective value:", m.objVal)
     for v in m.getVars():
         if v.x > 0:

@@ -24,3 +24,4 @@ if __name__=="__main__":
     instance_path = "Instance_%s.txt" % scenarios
     J, I, C, P, Omega, f, g, l, d, p = instance(instance_path).parse_instance()
     print(J, I, C, P, Omega, f, g, l, d, p)
+    
