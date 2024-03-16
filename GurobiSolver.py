@@ -34,8 +34,8 @@ class model:
     def solve(self, scenarios):
         m = self.create_model()
         m.optimize()
-        m.write("Instance_%s.lp" % scenarios)
-        m.write("Instance_%s.sol" % scenarios)
+        # m.write("Instance_%s.lp" % scenarios)
+        # m.write("Instance_%s.sol" % scenarios)
         return m
 
     def load(self, scenarios):
