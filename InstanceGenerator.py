@@ -48,11 +48,11 @@ class instance:
 #%%
 if __name__ == "__main__":
     # Define sets and parameters
-    J = 6 # Number potential sites
-    I = 5 # Number customers
-    C = 30 # Upper bound of capacity
-    P = 3 # Number of facilities that can be opened
-    Omega = 3 # Number of scenarios
+    J = 20 # Number potential sites
+    I = 50 # Number customers
+    C = 1000 # Upper bound of capacity
+    P = 10 # Number of facilities that can be opened
+    Omega = 20 # Number of scenarios
     f = (5, 15) # Fixed cost of opening a facility at site j
     g = (1, 10) # Capacity cost per unit at site j
     l = (1, 5) # Service cost from site j to customer i

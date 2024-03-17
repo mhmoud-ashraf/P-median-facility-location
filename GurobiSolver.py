@@ -9,6 +9,10 @@ class model:
     def create_model(self):
         # Create a new model
         m = gp.Model("Scenatio_%s" % self.Omega)
+        
+        # Set model parameters
+        m.Params.OutputFlag = 0 # Suppress console output
+        
         # Create variables
         y = m.addVars(self.J, vtype=GRB.BINARY, name="y")
         w = m.addVars(self.J, vtype=GRB.CONTINUOUS, name="w")
@@ -51,6 +55,6 @@ if __name__=="__main__":
     m = model(inst).solve(scenarios)
     # m = model(inst).load(scenarios)
     print("Objective value:", m.objVal)
-    for v in m.getVars():
-        if v.x > 0:
-            print(v.varName, v.x)
+    # for v in m.getVars():
+    #     if v.x > 0:
+    #         print(v.varName, v.x)

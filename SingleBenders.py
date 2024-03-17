@@ -1,6 +1,4 @@
 import time
-import random
-import numpy as np
 import gurobipy as gp
 from gurobipy import GRB
 from InstanceReader import instance
@@ -16,8 +14,8 @@ class model:
         # Set model parameters
         m.Params.OutputFlag = 0 # Suppress console output
         # m.Params.lazyConstraints = 1 # Enable lazy constraints
-        # m.Params.method = 1 # Use dual simplex
-        # m.Params.PreCrush = 1 # Enable presolve
+        m.Params.method = 1 # Use dual simplex
+        m.Params.PreCrush = 1 # Enable presolve
         
         # Create variables
         y = m.addVars(self.J, vtype=GRB.BINARY, name="y")
@@ -58,7 +56,7 @@ class model:
         m.Params.OutputFlag = 0 # Suppress console output
         m.Params.InfUnbdInfo = 1 # Enable infeasible and unbounded model detection
         m.Params.DualReductions = 0 # Disable dual reductions
-        # m.Params.method = 1 # Use dual simplex
+        m.Params.method = 1 # Use dual simplex
         
         # Create variables
         x = m.addVars(self.I, self.J, vtype=GRB.CONTINUOUS, name="x")
@@ -84,47 +82,40 @@ class model:
         return m
     
     def solve_master_problem(self, m):
+        # Update model
+        m.update()
         m.optimize()
+        m._y_val, m._w_val, m._eta_val = m.getAttr('x', m._y), m.getAttr('x', m._w), m.getAttr('x', m._eta) # Store values
         # m.write("Master_Problem.lp")
         # m.write("Master_Problem.sol")
         return m
     
     def solve_sub_problem(self, SP, MP):
-        # Get master problem solution
-        y, w = MP._y, MP._w
-        y, w = MP.getAttr('x', y), MP.getAttr('x', w)
         # Add constraints
         for constr in SP.getConstrs():
             if "assign_to_open_facility" in constr.ConstrName:
                 i, j = int(constr.ConstrName.split("[")[1].split(",")[0]), int(constr.ConstrName.split(",")[1].split("]")[0])
-                constr.setAttr('rhs', y[j])
+                constr.setAttr('rhs', MP._y_val[j])
             if "assignment_capacity" in constr.ConstrName:
                 j = int(constr.ConstrName.split("[")[1].split("]")[0])
-                constr.setAttr('rhs', w[j])
+                constr.setAttr('rhs', MP._w_val[j])
         SP.optimize()
         # SP.write("Sub_Problem_%s.lp" % SP._scenario)
         # SP.write("Sub_Problem_%s.sol" % SP._scenario)
         return SP
     
-    def solve_benders(self, bound_gap=0, epsilon=0):
+    def solve_benders(self, bound_gap=1e-4, epsilon=1e-4, max_iter=10):
         # Initialization
         start = time.time() # Start timer
-        cut_found = True # Existance of cuts
         n_cuts = 0 # Number of cuts
         n_iters = 0 # Number of iterations
         best_ub = GRB.INFINITY # Best upper bound
         
         # Create master problem
         mp = self.master_problem()
-        y, w, eta = mp._y, mp._w, mp._eta # Get master problem variables
-        
-        # Create sub problems
-        sp = {k: self.sub_problem(k) for k in self.Omega} # Create sub problems
-        x = {k: sp[k]._x for k in self.Omega} # Get sub problem variables
         
         # Benders loop
-        while cut_found:
-            cut_found = False
+        while n_iters <= max_iter:
             n_iters += 1 # Update iterations counter
             cut_constr = 0 # Initialize single cut constraint
             sum_eta = 0
@@ -132,15 +123,14 @@ class model:
             # Solve master problem
             mp = self.solve_master_problem(mp)
             mp_obj = mp.objVal # Get master problem objective value
-            y_val, w_val, eta_val = mp.getAttr('x', y), mp.getAttr('x', w), mp.getAttr('x', eta) # Get master problem solution
-            print(mp_obj)
-            print(y_val, w_val, eta_val)
+            y, w, eta = mp._y, mp._w, mp._eta # Get master problem variables
+            print('Master problem objective value：{:.2f}'.format(mp_obj))
             
             # Update current upper bound (1)
-            ub = sum(self.f[j]*y_val[j] for j in self.J) + sum(self.g[j]*w_val[j] for j in self.J)
-            print(ub)
-            
+            ub = sum(self.f[j]*mp._y_val[j] for j in self.J) + sum(self.g[j]*mp._w_val[j] for j in self.J)
+                        
             for k in self.Omega:
+                # print('Solving sub problem %s' %k)
                 # Create and solve sub problem
                 sp_k = self.sub_problem(k)
                 sp_k = self.solve_sub_problem(sp_k, mp)
@@ -156,30 +146,32 @@ class model:
                     {i: constr.getAttr('Pi') for constr in sp_k.getConstrs() if "demand_fulfillment" in constr.ConstrName for i in self.I}, 
                     {(i, j): constr.getAttr('Pi') for constr in sp_k.getConstrs() if "upper_bound" in constr.ConstrName for i in self.I for j in self.J}
                     )
-                dual_obj = sum(y_val[j]*alpha[i,j] for i in self.I for j in self.J) + sum(w_val[j]*beta[j] for j in self.J) + sum(gamma[i] for i in self.I) + sum(delta[i,j] for i in self.I for j in self.J)
-                print(dual_obj, '--', sp_k.objVal)
                 
-        #         # Accumulate single cut constraint
-        #         cut_constr_k = gp.quicksum(y[j]*alpha[i,j] for i in self.I for j in self.J) + gp.quicksum(w[j]*beta[j] for j in self.J) + gp.quicksum(gamma[i] for i in self.I) + sum(delta[i,j] for i in self.I for j in self.J)
-        #         cut_constr += self.p[k] * cut_constr_k
+                # dual_obj = sum(mp._y_val[j]*alpha[i,j] for i in self.I for j in self.J) + sum(mp._w_val[j]*beta[j] for j in self.J) + sum(gamma[i] for i in self.I) + sum(delta[i,j] for i in self.I for j in self.J)
+                # print(dual_obj, '--', sp_k.objVal, '--', mp_obj)
                 
-        #     # Check whether a cut is found
-        #     cut_found = (eta_val[0] - sum_eta) > bound_gap
-        #     print(eta_val[0], sum_eta)
-        #     if cut_found:
-        #         # Update single cut
-        #         n_cuts += 1
-        #         mp.addConstr(eta[0] >= cut_constr, name="single_cut_%s" % n_cuts)
+                # Accumulate single cut constraint
+                cut_constr_k = gp.quicksum(y[j]*alpha[i,j] for i in self.I for j in self.J) + gp.quicksum(w[j]*beta[j] for j in self.J) + gp.quicksum(gamma[i] for i in self.I) + sum(delta[i,j] for i in self.I for j in self.J)
+                cut_constr += self.p[k] * cut_constr_k
+                
+            # Add cut
+            n_cuts += 1
+            mp.addConstr(eta[0] >= cut_constr, name="cut_%s" % n_cuts)
             
-        #     # Update best upper bound
-        #     best_ub = min(best_ub, ub)
-        #     print("Iteration %s: Best upper bound = %s" % (n_iters, best_ub))
+            # Update best upper bound
+            best_ub = min(best_ub, ub)
+            # print('Current upper bound: {:.2f}'.format(ub))
+            # print('Best upper bound: {:.2f}'.format(best_ub))
+            print("Iteration %s: Best upper bound = %s" % (n_iters, best_ub))
             
-        #     # Convergence check
-        #     if (best_ub - mp_obj) <= epsilon:
-        #         print('The algorithm converges.')
+            # Convergence check
+            if best_ub - mp_obj <= epsilon:
+                print('The algorithm converges.')
+                break
         
-        # end = time.time() # End timer
+        end = time.time() # End timer
+        
+        # return 
     
     def load(self, scenarios):
         m = self.create_model()
