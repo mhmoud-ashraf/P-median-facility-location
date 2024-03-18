@@ -55,6 +55,6 @@ if __name__=="__main__":
     m = model(inst).solve(scenarios)
     # m = model(inst).load(scenarios)
     print("Objective value:", m.objVal)
-    # for v in m.getVars():
-    #     if v.x > 0:
-    #         print(v.varName, v.x)
+    for v in m.getVars():
+        if v.x > 0:
+            print(v.varName, v.x)
